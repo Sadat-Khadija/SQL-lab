@@ -25,11 +25,15 @@ SELECT * FROM COUNTRY LIMIT 1;
 
 -- Clue #1: We recently got word that someone fitting Carmen Sandiego's description has been traveling through Southern Europe. She's most likely traveling someplace where she won't be noticed, so find the least populated country in Southern Europe, and we'll start looking for her there.
 
--- SELECT chooses columns; FROM sets the table; WHERE filters rows; ORDER BY sorts; LIMIT keeps the first row
+-- SELECT chooses the columns to show
 SELECT name, population
+-- FROM picks the source table
 FROM country
+-- WHERE limits rows to Southern Europe
 WHERE region = 'Southern Europe'
+-- ORDER BY sorts by population smallest first
 ORDER BY population ASC
+-- LIMIT keeps only the smallest single result
 LIMIT 1;
 
 --  name                           | population
@@ -38,10 +42,12 @@ LIMIT 1;
 
 -- Clue #2: Now that we're here, we have insight that Carmen was seen attending language classes in this country's officially recognized language. Check our databases and find out what language is spoken in this country, so we can call in a translator to work with you.
 
--- SELECT picks the language column; JOIN pairs language rows to matching country rows via code; WHERE narrows to Vatican; AND checks official status
+-- SELECT chooses the language column to return
 SELECT cl.language
+-- JOIN pairs countrylanguage rows to country rows by matching codes
 FROM countrylanguage cl
 JOIN country c ON c.code = cl.countrycode
+-- WHERE narrows to Vatican City and official languages only
 WHERE c.name = 'Holy See (Vatican City State)'
   AND cl.isofficial = TRUE;
 
@@ -51,11 +57,14 @@ WHERE c.name = 'Holy See (Vatican City State)'
 
 -- Clue #3: We have new news on the classes Carmen attended – our gumshoes tell us she's moved on to a different country, a country where people speak only the language she was learning. Find out which nearby country speaks nothing but that language.
 
--- GROUP BY collects each country; HAVING filters groups that have only one language and that language is Italian, excluding Vatican
+-- SELECT returns the country name and region
 SELECT c.name, c.region
+-- JOIN attaches language rows to their countries
 FROM country c
 JOIN countrylanguage cl ON c.code = cl.countrycode
+-- GROUP BY gathers rows per country so we can apply HAVING conditions
 GROUP BY c.name, c.region, c.code
+-- HAVING keeps countries with exactly one language and that language is Italian (not Vatican)
 HAVING COUNT(*) = 1
    AND MIN(cl.language) = 'Italian'
    AND c.code <> 'VAT';
@@ -66,10 +75,13 @@ HAVING COUNT(*) = 1
 
 -- Clue #4: We're booking the first flight out – maybe we've actually got a chance to catch her this time. There are only two cities she could be flying to in the country. One is named the same as the country – that would be too obvious. We're following our gut on this one; find out what other city in that country she might be flying to.
 
--- Filter city rows to San Marino's country code, then sort by population to see the larger city
+-- SELECT shows each city name and population
 SELECT name, population
+-- FROM reads from the city table
 FROM city
+-- WHERE keeps only cities in San Marino
 WHERE countrycode = 'SMR'
+-- ORDER BY ranks by population largest to smallest
 ORDER BY population DESC;
 
 --  name        | population
@@ -79,8 +91,39 @@ ORDER BY population DESC;
 
 -- Clue #5: Oh no, she pulled a switch – there are two cities with very similar names, but in totally different parts of the globe! She's headed to South America as we speak; go find a city whose name is like the one we were headed to, but doesn't end the same. Find out the city, and do another search for what country it's in. Hurry!
 
+-- SELECT shows possible city matches and their country codes
+SELECT name, countrycode, population
+-- FROM reads all cities
+FROM city
+-- WHERE matches city names starting with 'Serra'
+WHERE name LIKE 'Serra%';
+
+--  name  | countrycode | population
+--  Serra | BRA         | 302666
+
+-- SELECT shows the country name for the code we found
+SELECT name
+-- FROM reads from the country table
+FROM country
+-- WHERE filters to Brazil's code
+WHERE code = 'BRA';
+
+--  name
+--  Brazil
+
 
 -- Clue #6: We're close! Our South American agent says she just got a taxi at the airport, and is headed towards the capital! Look up the country's capital, and get there pronto! Send us the name of where you're headed and we'll follow right behind you!
+
+-- SELECT grabs the capital city name and population
+SELECT city.name AS capital, city.population
+-- FROM joins country rows to their capital city using the id
+FROM country
+JOIN city ON city.id = country.capital
+-- WHERE limits to Brazil
+WHERE country.name = 'Brazil';
+
+--  capital   | population
+--  Brasilia  | 1969868
 
 
 -- Clue #7: She knows we're on to her – her taxi dropped her off at the international airport, and she beat us to the boarding gates. We have one chance to catch her, we just have to know where she's heading and beat her to the landing dock.
@@ -95,3 +138,18 @@ ORDER BY population DESC;
 -- In a city of ninety-one thousand and now, eighty five.
 
 -- We're counting on you, gumshoe. Find out where she's headed, send us the info, and we'll be sure to meet her at the gates with bells on.
+
+-- SELECT lists candidate cities and their populations
+SELECT name, countrycode, population
+-- FROM searches the city table
+FROM city
+-- WHERE narrows to the hinted population range
+WHERE population BETWEEN 91080 AND 91090
+-- ORDER BY sorts the matches by population descending
+ORDER BY population DESC;
+
+--  name         | countrycode | population
+--  Santa Monica | USA         | 91084
+--  Idlib        | SYR         | 91081
+
+-- Carmen is chasing the sunshine to Santa Monica, USA (population bumps to 91085 when she arrives).
